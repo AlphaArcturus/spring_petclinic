@@ -68,19 +68,32 @@ pipeline {
         
         stage('Deploy to Staging') {
             steps {
-                echo 'Deploying PetClinic JAR to staging environment (simulated)'
-                // Example: run the JAR directly instead of Docker
-                bat 'java -jar target/spring-petclinic-*.jar --spring.profiles.active=staging || exit 0'
+                script {
+                    def jarFile = bat(script: 'dir /b target\\spring-petclinic-*.jar', returnStdout: true).trim()
+                    if (jarFile) {
+                        echo "Deploying ${jarFile} to staging..."
+                        bat "java -jar target\\${jarFile} --spring.profiles.active=staging || exit 0"
+                    } else {
+                        echo "No JAR found in target/, skipping staging deploy"
+                    }
+                }
             }
         }
-        
+
         stage('Release to Production') {
             steps {
-                input message: "Promote to Production?", ok: "Release"
-                echo 'Releasing PetClinic JAR to production environment (simulated)'
-                bat 'java -jar target/spring-petclinic-*.jar --spring.profiles.active=prod || exit 0'
+                script {
+                    def jarFile = bat(script: 'dir /b target\\spring-petclinic-*.jar', returnStdout: true).trim()
+                    if (jarFile) {
+                        echo "Auto-releasing ${jarFile} to production..."
+                        bat "java -jar target\\${jarFile} --spring.profiles.active=prod || exit 0"
+                    } else {
+                        echo "No JAR found in target/, skipping production release"
+                    }
+                }
             }
         }
+
 
         stage('Monitoring & Metrics') {
             steps {
