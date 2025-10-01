@@ -31,9 +31,12 @@ pipeline {
 
         stage('Code Quality') {
             steps {
-                // Requires SonarQube plugin configured in Jenkins
-                withSonarQubeEnv('SonarQubeServer') {
-                    bat 'mvn sonar:sonar'
+                bat 'mvn checkstyle:check'
+                bat 'mvn com.github.spotbugs:spotbugs-maven-plugin:check'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'target/site/**', allowEmptyArchive: true
                 }
             }
         }
