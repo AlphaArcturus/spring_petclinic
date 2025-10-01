@@ -59,31 +59,26 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Artifact') {
             steps {
-                bat "docker build -t %DOCKER_IMAGE% ."
+                bat 'mvn clean package -DskipTests'
+                archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
             }
         }
-
+        
         stage('Deploy to Staging') {
             steps {
-                // Stop old container if running
-                bat '''
-                docker stop petclinic-staging || exit 0
-                docker rm petclinic-staging || exit 0
-                docker run -d -p 8080:8080 --name petclinic-staging %DOCKER_IMAGE%
-                '''
+                echo 'Deploying PetClinic JAR to staging environment (simulated)'
+                // Example: run the JAR directly instead of Docker
+                bat 'java -jar target/spring-petclinic-*.jar --spring.profiles.active=staging || exit 0'
             }
         }
-
+        
         stage('Release to Production') {
             steps {
                 input message: "Promote to Production?", ok: "Release"
-                bat '''
-                docker stop petclinic-prod || exit 0
-                docker rm petclinic-prod || exit 0
-                docker run -d -p 9090:8080 --name petclinic-prod %DOCKER_IMAGE%
-                '''
+                echo 'Releasing PetClinic JAR to production environment (simulated)'
+                bat 'java -jar target/spring-petclinic-*.jar --spring.profiles.active=prod || exit 0'
             }
         }
 
