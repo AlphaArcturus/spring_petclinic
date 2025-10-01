@@ -2,20 +2,25 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven3'   // Make sure Maven is installed on Jenkins
-        jdk 'Java17'     // Ensure Jenkins has JDK 17 configured
+        maven 'Maven3'   // Configured in Jenkins Global Tools
+        jdk 'Java17'     // Configured in Jenkins Global Tools
+    }
+
+    environment {
+        DOCKER_IMAGE = "petclinic-app:latest"
     }
 
     stages {
+
         stage('Build') {
             steps {
-                sh 'mvn clean package -DskipTests'
+                bat 'mvn clean package -DskipTests'
             }
         }
 
         stage('Test') {
             steps {
-                sh 'mvn test'
+                bat 'mvn test'
             }
             post {
                 always {
@@ -28,34 +33,55 @@ pipeline {
             steps {
                 // Requires SonarQube plugin configured in Jenkins
                 withSonarQubeEnv('SonarQubeServer') {
-                    sh 'mvn sonar:sonar'
+                    bat 'mvn sonar:sonar'
                 }
             }
         }
 
         stage('Security Scan') {
             steps {
-                // Example using OWASP Dependency-Check
-                sh 'mvn org.owasp:dependency-check-maven:check'
+                // OWASP Dependency-Check plugin or CLI
+                bat 'mvn org.owasp:dependency-check-maven:check'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'target/dependency-check-report.html', allowEmptyArchive: true
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t petclinic-app:latest .'
+                bat "docker build -t %DOCKER_IMAGE% ."
             }
         }
 
         stage('Deploy to Staging') {
             steps {
-                sh 'docker run -d -p 8080:8080 --name petclinic-staging petclinic-app:latest'
+                // Stop old container if running
+                bat '''
+                docker stop petclinic-staging || exit 0
+                docker rm petclinic-staging || exit 0
+                docker run -d -p 8080:8080 --name petclinic-staging %DOCKER_IMAGE%
+                '''
             }
         }
 
-        stage('Monitoring & Release') {
+        stage('Release to Production') {
             steps {
-                echo 'Monitoring via Spring Boot Actuator + Prometheus'
-                echo 'Manual approval required before production release'
+                input message: "Promote to Production?", ok: "Release"
+                bat '''
+                docker stop petclinic-prod || exit 0
+                docker rm petclinic-prod || exit 0
+                docker run -d -p 9090:8080 --name petclinic-prod %DOCKER_IMAGE%
+                '''
+            }
+        }
+
+        stage('Monitoring & Metrics') {
+            steps {
+                echo 'Spring Boot Actuator endpoints available at /actuator/health and /actuator/metrics'
+                echo 'Configure Prometheus to scrape metrics and Grafana to visualize dashboards'
             }
         }
     }
@@ -65,7 +91,7 @@ pipeline {
             echo 'Pipeline completed successfully!'
         }
         failure {
-            echo 'Pipeline failed. Check logs.'
+            echo 'Pipeline failed. Check logs and reports.'
         }
     }
 }
