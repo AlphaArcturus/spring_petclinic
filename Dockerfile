@@ -1,14 +1,14 @@
-# Use official OpenJDK 17 runtime as base
+# Use official OpenJDK runtime as base
 FROM openjdk:17-jdk-slim
 
-# Set working directory
-WORKDIR /app
+# Argument to pass in the JAR file name
+ARG JAR_FILE=target/spring-petclinic-3.0.5-SNAPSHOT.jar
 
-# Copy the built JAR from Maven target folder
-COPY target/*.jar app.jar
+# Copy the JAR into the container
+COPY ${JAR_FILE} app.jar
 
 # Expose the default Spring Boot port
-EXPOSE 8080
+EXPOSE 7070
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Run the JAR
+ENTRYPOINT ["java","-jar","/app.jar"]
