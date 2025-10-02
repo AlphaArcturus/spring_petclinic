@@ -77,7 +77,7 @@ pipeline {
         stage('Docker Run') {
             steps {
                 echo "Running Docker container from ${DOCKER_IMAGE} on port 7070"
-                bat "docker run -d -p 7070:8080 --name petclinic-container ${DOCKER_IMAGE}"
+                bat "docker run -d -p 7070:7070 --name petclinic-container ${DOCKER_IMAGE}"
             }
         }
 
