@@ -32,16 +32,11 @@ pipeline {
         stage('Code Quality') {
             steps {
                 echo '=== Code Quality Stage ==='
-        
-                // Run Checkstyle in "report only" mode (does not fail build)
                 bat 'mvn checkstyle:checkstyle'
-        
-                // Run SpotBugs static analysis (ignore failures, just report)
                 bat 'mvn com.github.spotbugs:spotbugs-maven-plugin:check || exit 0'
             }
             post {
                 always {
-                    // Archive generated reports so you can show them in your submission
                     archiveArtifacts artifacts: 'target/site/**', allowEmptyArchive: true
                 }
             }
@@ -49,7 +44,6 @@ pipeline {
 
         stage('Security Scan') {
             steps {
-                // OWASP Dependency-Check plugin or CLI
                 bat 'mvn org.owasp:dependency-check-maven:check'
             }
             post {
@@ -65,35 +59,27 @@ pipeline {
                 archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
             }
         }
-        
-        stage('Deploy to Staging') {
+
+        stage('Docker Build') {
             steps {
                 script {
                     def jarFile = bat(script: 'dir /b target\\spring-petclinic-*.jar', returnStdout: true).trim()
                     if (jarFile) {
-                        echo "Deploying ${jarFile} to staging..."
-                        bat "java -jar target\\${jarFile} --spring.profiles.active=staging || exit 0"
+                        echo "Building Docker image ${DOCKER_IMAGE} with ${jarFile}"
+                        bat "docker build -t ${DOCKER_IMAGE} --build-arg JAR_FILE=target/${jarFile} ."
                     } else {
-                        echo "No JAR found in target/, skipping staging deploy"
+                        error "No JAR found in target/, cannot build Docker image"
                     }
                 }
             }
         }
 
-        stage('Release to Production') {
+        stage('Docker Run') {
             steps {
-                script {
-                    def jarFile = bat(script: 'dir /b target\\spring-petclinic-*.jar', returnStdout: true).trim()
-                    if (jarFile) {
-                        echo "Auto-releasing ${jarFile} to production..."
-                        bat "java -jar target\\${jarFile} --spring.profiles.active=prod || exit 0"
-                    } else {
-                        echo "No JAR found in target/, skipping production release"
-                    }
-                }
+                echo "Running Docker container from ${DOCKER_IMAGE} on port 7070"
+                bat "docker run -d -p 7070:8080 --name petclinic-container ${DOCKER_IMAGE}"
             }
         }
-
 
         stage('Monitoring & Metrics') {
             steps {
