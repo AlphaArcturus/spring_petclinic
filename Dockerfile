@@ -1,14 +1,14 @@
-# Use official OpenJDK runtime as base
 FROM openjdk:17-jdk-slim
 
-# Argument to pass in the JAR file name
-ARG JAR_FILE=target/spring-petclinic-3.0.5-SNAPSHOT.jar
+# Flexible JAR argument
+ARG JAR_FILE=target/spring-petclinic-*.jar
 
 # Copy the JAR into the container
 COPY ${JAR_FILE} app.jar
 
-# Expose the default Spring Boot port
-EXPOSE 7070
+# Expose port (Spring Boot default is 8080)
+EXPOSE 8080
 
-# Run the JAR
+# Run the JAR on port 8080 (map to 7070 outside if you want)
 ENTRYPOINT ["java","-jar","/app.jar"]
+
