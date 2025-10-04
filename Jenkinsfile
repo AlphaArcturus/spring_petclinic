@@ -73,7 +73,7 @@ pipeline {
         
                     if (jarFile) {
                         echo "Deploying ${jarFile} to STAGING on port ${DEPLOY_PORT}..."
-                        bat "start /B java -jar target\\${jarFile} --spring.profiles.active=staging --server.port=${DEPLOY_PORT}"
+                        bat "\"start /B java -jar target\\${jarFile} --spring.profiles.active=staging --server.port=${DEPLOY_PORT}\""
                     } else {
                         echo "No JAR found in target/, skipping staging deploy"
                     }
@@ -91,7 +91,7 @@ pipeline {
         
                     if (jarFile) {
                         echo "Releasing ${jarFile} to PRODUCTION on port ${DEPLOY_PORT}..."
-                        bat "start /B java -jar target\\${jarFile} --spring.profiles.active=prod --server.port=${DEPLOY_PORT}"
+                        bat "\"start /B java -jar target\\${jarFile} --spring.profiles.active=prod --server.port=${DEPLOY_PORT}\""
                     } else {
                         echo "No JAR found in target/, skipping production release"
                     }
