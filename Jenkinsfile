@@ -47,9 +47,7 @@ pipeline {
         stage('Code Quality') {
             steps {
                 echo '=== Code Quality Stage ==='
-                // Run Checkstyle (report only)
                 bat 'mvn checkstyle:checkstyle'
-                // Run SpotBugs (ignore failures, just report)
                 bat 'mvn com.github.spotbugs:spotbugs-maven-plugin:check || exit 0'
             }
             post {
@@ -77,7 +75,7 @@ pipeline {
                         script: 'dir /b target\\spring-petclinic-*.jar',
                         returnStdout: true
                     ).trim()
-        
+
                     if (jarFile) {
                         echo "Deploying ${jarFile} to STAGING on port ${DEPLOY_PORT}..."
                         bat "\"start /B java -jar target\\${jarFile} --spring.profiles.active=staging --server.port=${DEPLOY_PORT}\""
@@ -87,7 +85,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Release to Production') {
             steps {
                 script {
@@ -95,7 +93,7 @@ pipeline {
                         script: 'dir /b target\\spring-petclinic-*.jar',
                         returnStdout: true
                     ).trim()
-        
+
                     if (jarFile) {
                         echo "Releasing ${jarFile} to PRODUCTION on port ${DEPLOY_PORT}..."
                         bat "\"start /B java -jar target\\${jarFile} --spring.profiles.active=prod --server.port=${DEPLOY_PORT}\""
@@ -122,6 +120,7 @@ pipeline {
                 bat 'for /f "tokens=1" %%a in (\'jps -l ^| findstr spring-petclinic\') do taskkill /PID %%a /F'
             }
         }
+    }   // closes stages
 
     post {
         success {
@@ -130,5 +129,5 @@ pipeline {
         failure {
             echo 'Pipeline failed. Check logs and reports.'
         }
-    }
-}
+    }   // closes post
+}       // closes pipeline
