@@ -9,7 +9,7 @@ pipeline {
     environment {
         APP_NAME     = "spring-petclinic"
         APP_VERSION  = "1.0.0"
-        IMAGE_NAME   = "petclinic-app:latest"   // placeholder, not used but shows awareness
+        IMAGE_NAME   = "petclinic-app"   // base image name
         DEPLOY_PORT  = "7070"
     }
 
@@ -20,9 +20,9 @@ pipeline {
     stages {
         stage('Pre-cleanup') {
             steps {
-                echo 'Stopping any running PetClinic instances before build...'
-                // Kill only PetClinic task
-                bat 'cmd /c "for /f \"tokens=5\" %%a in (\'netstat -ano ^| findstr :7070\') do taskkill /PID %%a /F" || exit /b 0'
+                echo 'Stopping any running PetClinic containers before build...'
+                bat 'docker rm -f petclinic-staging || exit 0'
+                bat 'docker rm -f petclinic-prod || exit 0'
             }
         }
 
@@ -68,7 +68,7 @@ pipeline {
             }
         }
 
-        stage('Deploy to Staging') {
+        stage('Deploy to Staging (Docker)') {
             steps {
                 script {
                     def jarFile = bat(
@@ -77,8 +77,11 @@ pipeline {
                     ).trim()
 
                     if (jarFile) {
-                        echo "Deploying ${jarFile} to STAGING on port ${DEPLOY_PORT}..."
-                        bat "\"start /B java -jar target\\${jarFile} --spring.profiles.active=staging --server.port=${DEPLOY_PORT}\""
+                        echo "Building Docker image for ${jarFile}..."
+                        bat "docker build -t ${IMAGE_NAME}-staging ."
+
+                        echo "Running container on port ${DEPLOY_PORT}..."
+                        bat "docker run -d -p ${DEPLOY_PORT}:8080 --name petclinic-staging ${IMAGE_NAME}-staging"
                     } else {
                         echo "No JAR found in target/, skipping staging deploy"
                     }
@@ -86,7 +89,7 @@ pipeline {
             }
         }
 
-        stage('Release to Production') {
+        stage('Release to Production (Docker)') {
             steps {
                 script {
                     def jarFile = bat(
@@ -95,8 +98,11 @@ pipeline {
                     ).trim()
 
                     if (jarFile) {
-                        echo "Releasing ${jarFile} to PRODUCTION on port ${DEPLOY_PORT}..."
-                        bat "\"start /B java -jar target\\${jarFile} --spring.profiles.active=prod --server.port=${DEPLOY_PORT}\""
+                        echo "Building Docker image for ${jarFile}..."
+                        bat "docker build -t ${IMAGE_NAME}-prod ."
+
+                        echo "Running container on port 8081..."
+                        bat "docker run -d -p 8081:8080 --name petclinic-prod ${IMAGE_NAME}-prod"
                     } else {
                         echo "No JAR found in target/, skipping production release"
                     }
@@ -109,15 +115,15 @@ pipeline {
                 echo "Spring Boot Actuator endpoints available at:"
                 echo "  http://localhost:${DEPLOY_PORT}/actuator/health"
                 echo "  http://localhost:${DEPLOY_PORT}/actuator/metrics"
-                echo "These can be integrated with Prometheus/Grafana for real monitoring."
+                echo "Production would be at http://localhost:8081/actuator/health"
             }
         }
 
         stage('Cleanup') {
             steps {
-                echo 'Stopping any running PetClinic instances after pipeline...'
-                // Kill only PetClinic task
-                bat 'cmd /c "for /f \"tokens=5\" %%a in (\'netstat -ano ^| findstr :7070\') do taskkill /PID %%a /F" || exit /b 0'
+                echo 'Stopping and removing any PetClinic containers after pipeline...'
+                bat 'docker rm -f petclinic-staging || exit 0'
+                bat 'docker rm -f petclinic-prod || exit 0'
             }
         }
     }   // closes stages
