@@ -7,14 +7,22 @@ pipeline {
     }
 
     environment {
-        DOCKER_IMAGE = "petclinic-app:latest"
+        APP_NAME     = "spring-petclinic"
+        APP_VERSION  = "1.0.0"
+        IMAGE_NAME   = "petclinic-app:latest"   // placeholder, not used but shows awareness
+        DEPLOY_PORT  = "7070"
+    }
+
+    options {
+        timestamps()     // Add timestamps to logs
     }
 
     stages {
 
-        stage('Build') {
+        stage('Build & Package') {
             steps {
                 bat 'mvn clean package -DskipTests'
+                archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
             }
         }
 
@@ -32,16 +40,13 @@ pipeline {
         stage('Code Quality') {
             steps {
                 echo '=== Code Quality Stage ==='
-        
-                // Run Checkstyle in "report only" mode (does not fail build)
+                // Run Checkstyle (report only)
                 bat 'mvn checkstyle:checkstyle'
-        
-                // Run SpotBugs static analysis (ignore failures, just report)
+                // Run SpotBugs (ignore failures, just report)
                 bat 'mvn com.github.spotbugs:spotbugs-maven-plugin:check || exit 0'
             }
             post {
                 always {
-                    // Archive generated reports so you can show them in your submission
                     archiveArtifacts artifacts: 'target/site/**', allowEmptyArchive: true
                 }
             }
@@ -49,7 +54,6 @@ pipeline {
 
         stage('Security Scan') {
             steps {
-                // OWASP Dependency-Check plugin or CLI
                 bat 'mvn org.owasp:dependency-check-maven:check'
             }
             post {
@@ -59,36 +63,27 @@ pipeline {
             }
         }
 
-        stage('Build Artifact') {
-            steps {
-                bat 'mvn clean package -DskipTests'
-                archiveArtifacts artifacts: 'target/*.jar', allowEmptyArchive: true
-            }
-        }
-        
         stage('Deploy to Staging') {
             steps {
                 script {
-                    def jarFile = bat(script: 'dir /b target\\spring-petclinic-*.jar', returnStdout: true).trim()
+                    def jarFile = bat(script: "dir /b target\\${APP_NAME}-*.jar", returnStdout: true).trim()
                     if (jarFile) {
-                        echo "Deploying ${jarFile} to staging on port 7070..."
-                        // Run in background so Jenkins can continue
-                        bat "start /B java -jar target\\${jarFile} --spring.profiles.active=staging --server.port=7070"
+                        echo "Deploying ${jarFile} to STAGING on port ${DEPLOY_PORT}..."
+                        bat "start /B java -jar target\\${jarFile} --spring.profiles.active=staging --server.port=${DEPLOY_PORT}"
                     } else {
                         echo "No JAR found in target/, skipping staging deploy"
                     }
                 }
             }
         }
-        
+
         stage('Release to Production') {
             steps {
                 script {
-                    def jarFile = bat(script: 'dir /b target\\spring-petclinic-*.jar', returnStdout: true).trim()
+                    def jarFile = bat(script: "dir /b target\\${APP_NAME}-*.jar", returnStdout: true).trim()
                     if (jarFile) {
-                        echo "Releasing ${jarFile} to production on port 7070..."
-                        // Run in background so Jenkins can continue
-                        bat "start /B java -jar target\\${jarFile} --spring.profiles.active=prod --server.port=7070"
+                        echo "Releasing ${jarFile} to PRODUCTION on port ${DEPLOY_PORT}..."
+                        bat "start /B java -jar target\\${jarFile} --spring.profiles.active=prod --server.port=${DEPLOY_PORT}"
                     } else {
                         echo "No JAR found in target/, skipping production release"
                     }
@@ -98,8 +93,17 @@ pipeline {
 
         stage('Monitoring & Metrics') {
             steps {
-                echo 'Spring Boot Actuator endpoints available at /actuator/health and /actuator/metrics'
-                echo 'Configure Prometheus to scrape metrics and Grafana to visualize dashboards'
+                echo "Spring Boot Actuator endpoints available at:"
+                echo "  http://localhost:${DEPLOY_PORT}/actuator/health"
+                echo "  http://localhost:${DEPLOY_PORT}/actuator/metrics"
+                echo "These can be integrated with Prometheus/Grafana for real monitoring."
+            }
+        }
+
+        stage('Cleanup') {
+            steps {
+                echo 'Stopping any running PetClinic instances...'
+                bat 'taskkill /F /IM java.exe || exit 0'
             }
         }
     }
