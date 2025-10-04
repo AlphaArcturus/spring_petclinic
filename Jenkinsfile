@@ -21,7 +21,8 @@ pipeline {
         stage('Pre-cleanup') {
             steps {
                 echo 'Stopping any running PetClinic instances before build...'
-                bat 'taskkill /F /IM java.exe || exit 0'
+                // Kill only PetClinic, not Jenkins
+                bat 'for /f "tokens=1" %%a in (\'jps -l ^| findstr spring-petclinic\') do taskkill /PID %%a /F'
             }
         }
 
@@ -116,11 +117,11 @@ pipeline {
 
         stage('Cleanup') {
             steps {
-                echo 'Stopping any running PetClinic instances...'
-                bat 'taskkill /F /IM java.exe || exit 0'
+                echo 'Stopping any running PetClinic instances after pipeline...'
+                // Kill only PetClinic, not Jenkins
+                bat 'for /f "tokens=1" %%a in (\'jps -l ^| findstr spring-petclinic\') do taskkill /PID %%a /F'
             }
         }
-    }
 
     post {
         success {
