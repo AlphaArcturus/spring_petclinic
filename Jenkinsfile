@@ -22,7 +22,7 @@ pipeline {
             steps {
                 echo 'Stopping any running PetClinic instances before build...'
                 // Kill only PetClinic task
-                bat 'for /f "tokens=5" %%a in (\'netstat -ano ^| findstr :7070\') do taskkill /PID %%a /F || exit 0'
+                bat 'cmd /c "for /f \"tokens=5\" %%a in (\'netstat -ano ^| findstr :7070\') do taskkill /PID %%a /F" || exit /b 0'
             }
         }
 
@@ -117,7 +117,7 @@ pipeline {
             steps {
                 echo 'Stopping any running PetClinic instances after pipeline...'
                 // Kill only PetClinic task
-                bat 'for /f "tokens=5" %%a in (\'netstat -ano ^| findstr :7070\') do taskkill /PID %%a /F || exit 0'
+                bat 'cmd /c "for /f \"tokens=5\" %%a in (\'netstat -ano ^| findstr :7070\') do taskkill /PID %%a /F" || exit /b 0'
             }
         }
     }   // closes stages
