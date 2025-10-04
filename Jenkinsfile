@@ -71,29 +71,30 @@ pipeline {
                 script {
                     def jarFile = bat(script: 'dir /b target\\spring-petclinic-*.jar', returnStdout: true).trim()
                     if (jarFile) {
-                        echo "Deploying ${jarFile} to staging..."
-                        bat "java -jar target\\${jarFile} --spring.profiles.active=staging || exit 0"
+                        echo "Deploying ${jarFile} to staging on port 7070..."
+                        // Run in background so Jenkins can continue
+                        bat "start /B java -jar target\\${jarFile} --spring.profiles.active=staging --server.port=7070"
                     } else {
                         echo "No JAR found in target/, skipping staging deploy"
                     }
                 }
             }
         }
-
+        
         stage('Release to Production') {
             steps {
                 script {
                     def jarFile = bat(script: 'dir /b target\\spring-petclinic-*.jar', returnStdout: true).trim()
                     if (jarFile) {
-                        echo "Auto-releasing ${jarFile} to production..."
-                        bat "java -jar target\\${jarFile} --spring.profiles.active=prod || exit 0"
+                        echo "Releasing ${jarFile} to production on port 7070..."
+                        // Run in background so Jenkins can continue
+                        bat "start /B java -jar target\\${jarFile} --spring.profiles.active=prod --server.port=7070"
                     } else {
                         echo "No JAR found in target/, skipping production release"
                     }
                 }
             }
         }
-
 
         stage('Monitoring & Metrics') {
             steps {
