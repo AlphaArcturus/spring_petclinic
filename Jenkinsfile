@@ -66,7 +66,11 @@ pipeline {
         stage('Deploy to Staging') {
             steps {
                 script {
-                    def jarFile = bat(script: "dir /b target\\${APP_NAME}-*.jar", returnStdout: true).trim()
+                    def jarFile = bat(
+                        script: 'dir /b target\\spring-petclinic-*.jar',
+                        returnStdout: true
+                    ).trim()
+        
                     if (jarFile) {
                         echo "Deploying ${jarFile} to STAGING on port ${DEPLOY_PORT}..."
                         bat "start /B java -jar target\\${jarFile} --spring.profiles.active=staging --server.port=${DEPLOY_PORT}"
@@ -76,11 +80,15 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Release to Production') {
             steps {
                 script {
-                    def jarFile = bat(script: "dir /b target\\${APP_NAME}-*.jar", returnStdout: true).trim()
+                    def jarFile = bat(
+                        script: 'dir /b target\\spring-petclinic-*.jar',
+                        returnStdout: true
+                    ).trim()
+        
                     if (jarFile) {
                         echo "Releasing ${jarFile} to PRODUCTION on port ${DEPLOY_PORT}..."
                         bat "start /B java -jar target\\${jarFile} --spring.profiles.active=prod --server.port=${DEPLOY_PORT}"
