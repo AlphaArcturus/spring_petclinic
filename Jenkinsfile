@@ -118,14 +118,6 @@ pipeline {
                 echo "Production would be at http://localhost:8081/actuator/health"
             }
         }
-
-        stage('Cleanup') {
-            steps {
-                echo 'Stopping and removing any PetClinic containers after pipeline...'
-                bat 'docker rm -f petclinic-staging || exit 0'
-                bat 'docker rm -f petclinic-prod || exit 0'
-            }
-        }
     }   // closes stages
 
     post {
