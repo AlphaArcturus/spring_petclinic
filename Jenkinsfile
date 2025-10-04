@@ -18,6 +18,12 @@ pipeline {
     }
 
     stages {
+        stage('Pre-cleanup') {
+            steps {
+                echo 'Stopping any running PetClinic instances before build...'
+                bat 'taskkill /F /IM java.exe || exit 0'
+            }
+        }
 
         stage('Build & Package') {
             steps {
